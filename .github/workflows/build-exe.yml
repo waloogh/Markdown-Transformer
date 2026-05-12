@@ -23,14 +23,13 @@ jobs:
         run: pip install pyinstaller
 
       - name: 打包 EXE
-        shell: pwsh
+        shell: cmd
         run: |
-          $iconArg = if (Test-Path icon.png) { "--icon=icon.png" } else { "" }
-          pyinstaller --onefile --windowed `
-            $iconArg `
-            --add-data "md2gongwen.py;." `
-            --name "公文格式转换器" `
-            md2gongwen_gui.py
+          if exist icon.png (
+            pyinstaller --onefile --windowed --icon=icon.png --add-data "md2gongwen.py;." --name "公文格式转换器" md2gongwen_gui.py
+          ) else (
+            pyinstaller --onefile --windowed --add-data "md2gongwen.py;." --name "公文格式转换器" md2gongwen_gui.py
+          )
 
       - uses: actions/upload-artifact@v4
         with:
