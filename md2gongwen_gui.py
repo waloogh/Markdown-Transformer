@@ -29,15 +29,31 @@ DEFAULT_TEMPLATES = {
 }
 
 ROLES = ["标题", "主送单位", "正文", "一级标题", "二级标题", "三级标题", "附件", "落款"]
+
+# 字号映射：中文名 → pt
+SIZE_NAMES = {
+    "初号": 42, "小初": 36,
+    "一号": 26, "小一": 24,
+    "二号": 22, "小二": 18,
+    "三号": 16, "小三": 15,
+    "四号": 14, "小四": 12,
+    "五号": 10.5, "小五": 9,
+    "六号": 7.5, "小六": 6.5,
+    "七号": 5.5, "八号": 5,
+}
+SIZE_PT_TO_NAME = {v: k for k, v in SIZE_NAMES.items()}
+DEFAULT_SIZES = {"标题": 22, "主送单位": 16, "正文": 16, "一级标题": 16,
+                  "二级标题": 16, "三级标题": 16, "附件": 16, "落款": 16}
+
 ROLE_DEFAULTS = {
-    "标题":     {"font": "Songti SC",  "size": 22, "bold": False, "center": True,  "indent": False},
-    "主送单位": {"font": "STFangsong", "size": 16, "bold": False, "center": False, "indent": False},
-    "正文":     {"font": "STFangsong", "size": 16, "bold": False, "center": False, "indent": True},
-    "一级标题": {"font": "Heiti SC",   "size": 16, "bold": False, "center": False, "indent": True},
-    "二级标题": {"font": "STKaiti",    "size": 16, "bold": False, "center": False, "indent": True},
-    "三级标题": {"font": "STFangsong", "size": 16, "bold": True,  "center": False, "indent": True},
-    "附件":     {"font": "STFangsong", "size": 16, "bold": False, "center": False, "indent": False},
-    "落款":     {"font": "STFangsong", "size": 16, "bold": False, "center": False, "indent": False},
+    "标题":     {"font": "方正小标宋简体", "size": 22, "bold": False, "center": True,  "indent": 0},
+    "主送单位": {"font": "仿宋_GB2312",    "size": 16, "bold": False, "center": False, "indent": 0},
+    "正文":     {"font": "仿宋_GB2312",    "size": 16, "bold": False, "center": False, "indent": 2},
+    "一级标题": {"font": "黑体",           "size": 16, "bold": False, "center": False, "indent": 2},
+    "二级标题": {"font": "楷体_GB2312",    "size": 16, "bold": False, "center": False, "indent": 2},
+    "三级标题": {"font": "仿宋_GB2312",    "size": 16, "bold": True,  "center": False, "indent": 2},
+    "附件":     {"font": "仿宋_GB2312",    "size": 16, "bold": False, "center": False, "indent": 4},
+    "落款":     {"font": "仿宋_GB2312",    "size": 16, "bold": False, "center": False, "indent": 0},
 }
 
 
@@ -220,14 +236,14 @@ class FontConfigDialog(tk.Toplevel):
         nb.pack(fill="x", pady=(0, 10))
 
         role_labels = {
-            "标题": "小标宋二号 居中",
-            "主送单位": "仿宋三号 顶格",
-            "正文": "仿宋三号 首行缩进",
-            "一级标题": "黑体三号",
-            "二级标题": "楷体三号",
-            "三级标题": "仿宋加粗三号",
-            "附件": "仿宋三号 顶格",
-            "落款": "仿宋三号 右对齐",
+            "标题": "方正小标宋简体 二号 居中",
+            "主送单位": "仿宋_GB2312 三号 顶格",
+            "正文": "仿宋_GB2312 三号 首行缩进2字",
+            "一级标题": "黑体 三号 缩进2字",
+            "二级标题": "楷体_GB2312 三号 缩进2字",
+            "三级标题": "仿宋_GB2312 三号 加粗 缩进2字",
+            "附件": "仿宋_GB2312 三号 顶格 缩进4字",
+            "落款": "仿宋_GB2312 三号 右对齐",
         }
 
         self.role_vars = {}
@@ -587,13 +603,15 @@ class GongwenApp:
         for i, role in enumerate(ROLES):
             row = i + 1
             cfg = self.role_config.get(role, ROLE_DEFAULTS[role])
+            indent_val = cfg.get("indent", 0)
+            indent_text = f"缩{indent_val}字" if indent_val else ""
             vals = [
                 role,
                 cfg["font"][:12],
-                str(cfg["size"]),
+                self._size_name(cfg["size"]),
                 "✓" if cfg["bold"] else "",
                 "✓" if cfg["center"] else "",
-                "✓" if cfg["indent"] else "",
+                indent_text,
             ]
             row_labels = {}
             for j, v in enumerate(vals):
@@ -888,6 +906,11 @@ class GongwenApp:
             self._log_result(f"❌ 转换失败: {e}")
             messagebox.showerror("转换失败", str(e))
 
+        # 确保编辑器始终可用且聚焦
+        self.editor.configure(state="normal")
+        self.editor.focus_set()
+        self.root.update()
+
     def _open_output(self):
         if hasattr(self, 'last_output') and os.path.isfile(self.last_output):
             import subprocess
@@ -922,19 +945,25 @@ class GongwenApp:
         self._refresh_format_overview()
         self._log_result("✅ 格式配置已保存")
 
+    def _size_name(self, pt):
+        """pt → 中文字号名，如 22→'二号'"""
+        return SIZE_PT_TO_NAME.get(pt, f"{pt}pt")
+
     def _refresh_format_overview(self):
         """刷新格式速览表"""
         if not hasattr(self, 'fmt_labels'):
             return
         for role in ROLES:
             cfg = self.role_config.get(role, ROLE_DEFAULTS[role])
+            indent_val = cfg.get("indent", 0)
+            indent_text = f"缩{indent_val}字" if indent_val else ""
             vals = [
                 role,
                 cfg["font"][:12],
-                str(cfg["size"]),
+                self._size_name(cfg["size"]),
                 "✓" if cfg["bold"] else "",
                 "✓" if cfg["center"] else "",
-                "✓" if cfg["indent"] else "",
+                indent_text,
             ]
             if role in self.fmt_labels:
                 for j, v in enumerate(vals):
