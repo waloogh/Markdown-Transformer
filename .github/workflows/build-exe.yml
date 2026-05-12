@@ -23,9 +23,11 @@ jobs:
         run: pip install pyinstaller
 
       - name: 打包 EXE
+        shell: pwsh
         run: |
+          $iconArg = if (Test-Path icon.png) { "--icon=icon.png" } else { "" }
           pyinstaller --onefile --windowed `
-            --icon=icon.png `
+            $iconArg `
             --add-data "md2gongwen.py;." `
             --name "公文格式转换器" `
             md2gongwen_gui.py
