@@ -669,11 +669,11 @@ class GongwenApp:
     def _open_file(self, path=None):
         if not path:
             path = filedialog.askopenfilename(
-                title="打开 Markdown 文件",
+                title="打开文件（支持任意格式，内容按纯文本读取）",
                 filetypes=[
-                    ("Markdown files", "*.md *.markdown"),
-                    ("Text files", "*.txt"),
-                    ("All files", "*.*"),
+                    ("所有文件", "*.*"),
+                    ("Markdown", "*.md *.markdown"),
+                    ("文本文件", "*.txt"),
                 ]
             )
         if path and os.path.isfile(path):
