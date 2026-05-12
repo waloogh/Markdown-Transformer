@@ -519,7 +519,7 @@ class GongwenApp:
         )
         self.template_combo.pack(side="left", padx=2)
         self.template_combo.bind("<<ComboboxSelected>>",
-                                 lambda e: self._load_template(self.template_combo.get()))
+                                 lambda e: self._on_template_combo())
         if self.templates:
             self.template_combo.set(list(self.templates.keys())[0])
 
@@ -726,11 +726,21 @@ class GongwenApp:
 
     # ── 模板 ─────────────────────────────────────────────────────
 
+    def _on_template_combo(self):
+        """模板下拉选择事件（仅响应用户手动选择）"""
+        if getattr(self, '_suppress_combo', False):
+            self._suppress_combo = False
+            return
+        name = self.template_combo.get()
+        if name and name != self.current_template_name:
+            self._load_template(name)
+
     def _load_template(self, name, silent=False):
         if name in self.templates:
             self.current_template_name = name
             self.editor.delete(1.0, tk.END)
             self.editor.insert(1.0, self.templates[name])
+            self._suppress_combo = True
             self.template_combo.set(name)
             self.cur_template_label.configure(text=name)
             self._update_status()
@@ -743,6 +753,7 @@ class GongwenApp:
         self._rebuild_template_menu()
         self.template_combo["values"] = list(self.templates.keys())
         if self.current_template_name in self.templates:
+            self._suppress_combo = True
             self.template_combo.set(self.current_template_name)
             self.cur_template_label.configure(text=self.current_template_name)
 
@@ -756,6 +767,7 @@ class GongwenApp:
             name = name.strip()
             self.current_template_name = name
             self.editor.delete(1.0, tk.END)
+            self._suppress_combo = True
             self.template_combo.set("")
             self.cur_template_label.configure(text=f"{name} (未保存)")
             self._log_result(f"📝 新建模板: {name}（请编辑后保存）")
