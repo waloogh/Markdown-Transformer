@@ -494,10 +494,7 @@ class GongwenApp:
         self._build_output(self.output_frame)
         self.paned.add(self.output_frame, weight=4)
 
-        # 编辑区初始化：显示提示文字（可直接覆盖粘贴）
-        self.editor.insert(1.0, "在此粘贴 Markdown 内容，或从模板下拉框选择模板后点「加载」")
-        self.editor.configure(foreground="gray")
-        self.editor.bind("<FocusIn>", self._on_editor_focus)
+        # 编辑区初始化：空白，直接粘贴即可
         self.current_template_name = None
 
     def _build_editor(self, parent):
@@ -749,18 +746,7 @@ class GongwenApp:
                 return
         self._load_template(name)
 
-    _editor_placeholder_cleared = False
-
-    def _on_editor_focus(self, event):
-        """首次点击编辑器：清除提示文字，恢复黑色字体"""
-        if not self._editor_placeholder_cleared:
-            self.editor.delete(1.0, tk.END)
-            self.editor.configure(foreground="black")
-            self._editor_placeholder_cleared = True
-
     def _load_template(self, name, silent=False):
-        self._editor_placeholder_cleared = True
-        self.editor.configure(foreground="black")
         if name in self.templates:
             self.current_template_name = name
             self.editor.delete(1.0, tk.END)
