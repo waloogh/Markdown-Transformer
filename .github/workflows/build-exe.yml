@@ -20,7 +20,7 @@ jobs:
           python-version: '3.12'
 
       - name: 安装 pyinstaller
-        run: pip install pyinstaller
+        run: pip install pyinstaller pillow
 
       - name: 打包 EXE
         shell: cmd
