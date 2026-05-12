@@ -410,9 +410,6 @@ class GongwenApp:
         self.root.bind("<Command-o>", lambda e: self._open_file())
         self.root.bind("<Command-s>", lambda e: self._save_md())
         self.root.bind("<Command-b>", lambda e: self._convert())
-        self.root.bind("<Command-1>", lambda e: self._load_template_by_key(1))
-        self.root.bind("<Command-2>", lambda e: self._load_template_by_key(2))
-        self.root.bind("<Command-3>", lambda e: self._load_template_by_key(3))
 
         # ── 首次启动 ──
         if not self.config.get("first_run_done"):
@@ -497,9 +494,11 @@ class GongwenApp:
         self._build_output(self.output_frame)
         self.paned.add(self.output_frame, weight=4)
 
-        # 加载默认模板（两个面板都就绪后）
-        if self.templates:
-            self._load_template(list(self.templates.keys())[0], silent=True)
+        # 编辑区初始化：显示提示文字（可直接覆盖粘贴）
+        self.editor.insert(1.0, "在此粘贴 Markdown 内容，或从模板下拉框选择模板后点「加载」")
+        self.editor.configure(foreground="gray")
+        self.editor.bind("<FocusIn>", self._on_editor_focus)
+        self.current_template_name = None
 
     def _build_editor(self, parent):
         """左侧 Markdown 编辑区"""
@@ -734,16 +733,34 @@ class GongwenApp:
         name = self.template_combo.get()
         if not name:
             return
+        # 同模板不重复加载（除非用户主动点）
+        if name == self.current_template_name:
+            # 如果用户没改过内容，不需要重载
+            current_text = self.editor.get(1.0, "end-1c")
+            template_text = self.templates.get(name, "")
+            if current_text == template_text:
+                return  # 内容和模板一致，跳过
         # 如果用户已编辑过内容，确认是否覆盖
         current_text = self.editor.get(1.0, "end-1c")
         template_text = self.templates.get(self.current_template_name, "")
-        if current_text.strip() and current_text != template_text and name != self.current_template_name:
+        if current_text.strip() and current_text != template_text:
             if not messagebox.askyesno("确认加载", f"当前编辑内容将被「{name}」模板覆盖，确定加载？"):
                 self.template_combo.set(self.current_template_name or list(self.templates.keys())[0])
                 return
         self._load_template(name)
 
+    _editor_placeholder_cleared = False
+
+    def _on_editor_focus(self, event):
+        """首次点击编辑器：清除提示文字，恢复黑色字体"""
+        if not self._editor_placeholder_cleared:
+            self.editor.delete(1.0, tk.END)
+            self.editor.configure(foreground="black")
+            self._editor_placeholder_cleared = True
+
     def _load_template(self, name, silent=False):
+        self._editor_placeholder_cleared = True
+        self.editor.configure(foreground="black")
         if name in self.templates:
             self.current_template_name = name
             self.editor.delete(1.0, tk.END)
